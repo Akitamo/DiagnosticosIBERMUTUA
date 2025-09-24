@@ -354,20 +354,20 @@ else:
         dias_sel = int(df_cuadrante[COL_TOTAL_DIAS].sum())
         dias15_sel = int(df_cuadrante[COL_DIAS_GT15].sum())
 
-        total_diag_incl = metricas['Incluido']['diagnosticos']
-        total_epi_incl = metricas['Incluido']['episodios']
-        total_dias_incl = metricas['Incluido']['dias']
-        total_dias15_incl = metricas['Incluido']['dias_mayor_15']
+        total_diag = metricas['Total']['diagnosticos']
+        total_epi = metricas['Total']['episodios']
+        total_dias = metricas['Total']['dias']
+        total_dias15 = metricas['Total']['dias_mayor_15']
 
         c1, c2, c3, c4 = st.columns(4)
         with c1:
-            st.metric("Diagnosticos seleccionados", f"{diag_sel:,}", delta=f"{ratio(diag_sel, total_diag_incl):.1f}% de incluidos")
+            st.metric("Diagnosticos priorizados", f"{diag_sel:,}", delta=f"{ratio(diag_sel, total_diag):.1f}% del total")
         with c2:
-            st.metric("Episodios seleccionados", f"{epis_sel:,}", delta=f"{ratio(epis_sel, total_epi_incl):.1f}% de incluidos")
+            st.metric("Episodios priorizados", f"{epis_sel:,}", delta=f"{ratio(epis_sel, total_epi):.1f}% del total")
         with c3:
-            st.metric("Dias IT seleccionados", f"{dias_sel:,}", delta=f"{ratio(dias_sel, total_dias_incl):.1f}% de incluidos")
+            st.metric("Dias IT priorizados", f"{dias_sel:,}", delta=f"{ratio(dias_sel, total_dias):.1f}% del total")
         with c4:
-            st.metric("Dias >15 seleccionados", f"{dias15_sel:,}", delta=f"{ratio(dias15_sel, total_dias15_incl):.1f}% de incluidos")
+            st.metric("Dias >15 priorizados", f"{dias15_sel:,}", delta=f"{ratio(dias15_sel, total_dias15):.1f}% del total")
 
         df_tabla = df_cuadrante[[
             COL_DIAG,
@@ -382,16 +382,73 @@ else:
             'S1',
         ]].copy()
         df_tabla = df_tabla.sort_values('share_total_pct', ascending=False)
+        totales = {
+            COL_DIAG: 'TOTAL',
+            COL_CAPITULO: '',
+            COL_TIPO: '',
+            COL_TOTAL_EPIS: int(df_tabla[COL_TOTAL_EPIS].sum()),
+            COL_TOTAL_DIAS: int(df_tabla[COL_TOTAL_DIAS].sum()),
+            COL_DIAS_GT15: int(df_tabla[COL_DIAS_GT15].sum()),
+            'duracion_media': df_tabla['duracion_media'].mean(),
+            'share_gt15_pct': df_tabla['share_gt15_pct'].mean(),
+            'share_total_pct': df_tabla['share_total_pct'].sum(),
+            'S1': df_tabla['S1'].mean(),
+        }
+        df_tabla = pd.concat([df_tabla, pd.DataFrame([totales])], ignore_index=True)
         df_tabla_format = df_tabla.rename(columns={
             'duracion_media': 'Tod durac media',
             'share_gt15_pct': '%TotEpis>15dias (%)',
             'share_total_pct': '%Totsobre total epis (%)',
         }).copy()
-        df_tabla_format[COL_TOTAL_EPIS] = df_tabla_format[COL_TOTAL_EPIS].apply(lambda x: f"{int(x):,}")
-        df_tabla_format[COL_TOTAL_DIAS] = df_tabla_format[COL_TOTAL_DIAS].apply(lambda x: f"{int(x):,}")
-        df_tabla_format[COL_DIAS_GT15] = df_tabla_format[COL_DIAS_GT15].apply(lambda x: f"{int(x):,}")
-        df_tabla_format['Tod durac media'] = df_tabla_format['Tod durac media'].apply(lambda x: f"{x:.1f}")
-        df_tabla_format['%TotEpis>15dias (%)'] = df_tabla_format['%TotEpis>15dias (%)'].apply(lambda x: f"{x:.2f}%")
-        df_tabla_format['%Totsobre total epis (%)'] = df_tabla_format['%Totsobre total epis (%)'].apply(lambda x: f"{x:.4f}%")
-        df_tabla_format['S1'] = df_tabla_format['S1'].apply(lambda x: f"{x:.2f}")
+        df_tabla_format[COL_TOTAL_EPIS] = df_tabla_format[COL_TOTAL_EPIS].apply(lambda x: f"{int(x):,}" if pd.notna(x) else '')
+        df_tabla_format[COL_TOTAL_DIAS] = df_tabla_format[COL_TOTAL_DIAS].apply(lambda x: f"{int(x):,}" if pd.notna(x) else '')
+        df_tabla_format[COL_DIAS_GT15] = df_tabla_format[COL_DIAS_GT15].apply(lambda x: f"{int(x):,}" if pd.notna(x) else '')
+        df_tabla_format['Tod durac media'] = df_tabla_format['Tod durac media'].apply(lambda x: f"{x:.1f}" if pd.notna(x) else '')
+        df_tabla_format['%TotEpis>15dias (%)'] = df_tabla_format['%TotEpis>15dias (%)'].apply(lambda x: f"{x:.2f}%" if pd.notna(x) else '')
+        df_tabla_format['%Totsobre total epis (%)'] = df_tabla_format['%Totsobre total epis (%)'].apply(lambda x: f"{x:.4f}%" if pd.notna(x) else '')
+        df_tabla_format['S1'] = df_tabla_format['S1'].apply(lambda x: f"{x:.2f}" if pd.notna(x) else '')
         st.dataframe(df_tabla_format, use_container_width=True, hide_index=True)
+
+        restantes_mask = (df_incluidos[COL_TIPO] == 'PRINCIPAL') & (~df_incluidos.index.isin(df_cuadrante.index))
+        df_principal_fuera = df_incluidos[restantes_mask][[
+            COL_DIAG,
+            COL_CAPITULO,
+            COL_TOTAL_EPIS,
+            COL_TOTAL_DIAS,
+            COL_DIAS_GT15,
+            'duracion_media',
+            'share_gt15_pct',
+            'share_total_pct',
+            'S1',
+        ]].copy()
+
+        st.markdown('#### Diagnosticos PRINCIPAL fuera del cuadrante')
+        if df_principal_fuera.empty:
+            st.info('Ningun diagnostico de tipo PRINCIPAL queda fuera del cuadrante con los umbrales actuales.')
+        else:
+            df_principal_fuera = df_principal_fuera.sort_values('share_total_pct', ascending=False)
+            totales_fuera = {
+                COL_DIAG: 'TOTAL',
+                COL_CAPITULO: '',
+                COL_TOTAL_EPIS: int(df_principal_fuera[COL_TOTAL_EPIS].sum()),
+                COL_TOTAL_DIAS: int(df_principal_fuera[COL_TOTAL_DIAS].sum()),
+                COL_DIAS_GT15: int(df_principal_fuera[COL_DIAS_GT15].sum()),
+                'duracion_media': df_principal_fuera['duracion_media'].mean(),
+                'share_gt15_pct': df_principal_fuera['share_gt15_pct'].mean(),
+                'share_total_pct': df_principal_fuera['share_total_pct'].sum(),
+                'S1': df_principal_fuera['S1'].mean(),
+            }
+            df_principal_fuera = pd.concat([df_principal_fuera, pd.DataFrame([totales_fuera])], ignore_index=True)
+            df_principal_format = df_principal_fuera.rename(columns={
+                'duracion_media': 'Tod durac media',
+                'share_gt15_pct': '%TotEpis>15dias (%)',
+                'share_total_pct': '%Totsobre total epis (%)',
+            }).copy()
+            df_principal_format[COL_TOTAL_EPIS] = df_principal_format[COL_TOTAL_EPIS].apply(lambda x: f"{int(x):,}" if pd.notna(x) else '')
+            df_principal_format[COL_TOTAL_DIAS] = df_principal_format[COL_TOTAL_DIAS].apply(lambda x: f"{int(x):,}" if pd.notna(x) else '')
+            df_principal_format[COL_DIAS_GT15] = df_principal_format[COL_DIAS_GT15].apply(lambda x: f"{int(x):,}" if pd.notna(x) else '')
+            df_principal_format['Tod durac media'] = df_principal_format['Tod durac media'].apply(lambda x: f"{x:.1f}" if pd.notna(x) else '')
+            df_principal_format['%TotEpis>15dias (%)'] = df_principal_format['%TotEpis>15dias (%)'].apply(lambda x: f"{x:.2f}%" if pd.notna(x) else '')
+            df_principal_format['%Totsobre total epis (%)'] = df_principal_format['%Totsobre total epis (%)'].apply(lambda x: f"{x:.4f}%" if pd.notna(x) else '')
+            df_principal_format['S1'] = df_principal_format['S1'].apply(lambda x: f"{x:.2f}" if pd.notna(x) else '')
+            st.dataframe(df_principal_format, use_container_width=True, hide_index=True)

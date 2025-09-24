@@ -75,6 +75,7 @@ DiagnosticosIBERMUTUA/
 ## ESTADO ACTUAL (24/09/2025)
 - Matriz de priorizacion usa severidad S1 (duracion media x % episodios >15) en el eje X y la participacion de episodios en logit para Y; la leyenda lateral permanece desactivada.
 - Sliders de S1 (cuantiles 5-95, default P75) y % del total de episodios (paso 0.0005) gobiernan los cortes del grafico y de la tabla priorizada.
+- KPIs de priorizados referencian el universo total, la tabla incluye fila de totales y se expone listado de PRINCIPAL fuera del cuadrante.
 - Burbuja escala por dias totales (winsor p95) y los hover muestran diagnostico, capitulo y metricas clave en % reales.
 - KPIs, funnels, Pareto y controles siguen recalculando correctamente; Sankey mantiene la version inicial.
 
