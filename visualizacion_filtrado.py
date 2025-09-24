@@ -274,12 +274,24 @@ if df_incluidos.empty:
 else:
     share_total_prop = df_incluidos[COL_SHARE_TOTAL_EPIS].astype(float).clip(1e-6, 1 - 1e-6)
     pct_gt15_prop = df_incluidos[COL_PCT_EPI_GT15].astype(float).clip(0.0, 1.0)
+    total_dias_global = metricas['Total']['dias'] or 0
+    total_dias_gt15_global = metricas['Total']['dias_mayor_15'] or 0
+    share_dias_prop = df_incluidos[COL_TOTAL_DIAS] / total_dias_global if total_dias_global else 0.0
+    share_dias15_prop = df_incluidos[COL_DIAS_GT15] / total_dias_gt15_global if total_dias_gt15_global else 0.0
+    share_dias_prop = share_dias_prop.clip(1e-6, 1 - 1e-6) if isinstance(share_dias_prop, pd.Series) else share_dias_prop
+    share_dias15_prop = share_dias15_prop.clip(1e-6, 1 - 1e-6) if isinstance(share_dias15_prop, pd.Series) else share_dias15_prop
     df_incluidos = df_incluidos.assign(
         duracion_media=df_incluidos[COL_DURACION_MEDIA],
         share_total_prop=share_total_prop,
         share_total_pct=share_total_prop * 100,
         share_gt15_pct=pct_gt15_prop * 100,
         share_total_logit=logit(share_total_prop),
+        share_dias_prop=share_dias_prop,
+        share_dias_pct=share_dias_prop * 100,
+        share_dias_logit=logit(np.clip(share_dias_prop, 1e-6, 1 - 1e-6)),
+        share_dias15_prop=share_dias15_prop,
+        share_dias15_pct=share_dias15_prop * 100,
+        share_dias15_logit=logit(np.clip(share_dias15_prop, 1e-6, 1 - 1e-6)),
     )
 
     size_cap = float(df_incluidos[COL_TOTAL_DIAS].quantile(0.95))
@@ -304,6 +316,7 @@ else:
     df_incluidos = df_incluidos.assign(
         esperado_pct=esperado_pct,
         lift_pct=lift_pct,
+        impacto_delta=np.maximum(df_incluidos[COL_DURACION_MEDIA] - 15.0, 0.0) * df_incluidos[COL_TOTAL_EPIS] * pct_gt15_prop,
         S1_hibrida=s1_valor,
     )
 
@@ -318,7 +331,21 @@ else:
     s1_step = max((s1_max - s1_min) / 100, 0.05)
     severidad_umbral = st.sidebar.slider("Umbral severidad (S1h)", min_value=s1_min, max_value=s1_max, value=float(round(s1_default, 3)), step=float(round(s1_step, 3)))
 
-    share_pct_series = df_incluidos['share_total_pct']
+    y_metric_option = st.sidebar.radio("Metrica eje Y", ("Dias totales", "Dias >15"), index=0)
+    if y_metric_option == "Dias >15":
+        share_prop_target = df_incluidos['share_dias15_prop']
+        share_pct_target = df_incluidos['share_dias15_pct']
+        share_logit_target = df_incluidos['share_dias15_logit']
+        share_label = "% dias >15"
+        share_pct_column = 'share_dias15_pct'
+    else:
+        share_prop_target = df_incluidos['share_dias_prop']
+        share_pct_target = df_incluidos['share_dias_pct']
+        share_logit_target = df_incluidos['share_dias_logit']
+        share_label = "% dias"
+        share_pct_column = 'share_dias_pct'
+
+    share_pct_series = share_pct_target
     share_max = float(share_pct_series.quantile(0.95))
     if share_max <= 0:
         share_max = float(share_pct_series.max() or 0.1)
@@ -326,24 +353,32 @@ else:
     if share_default > share_max:
         share_default = share_max
     share_step = max(share_max / 200, 0.0005)
-    share_umbral_pct = st.sidebar.slider("Umbral % del total de episodios", min_value=0.0, max_value=share_max, value=float(round(share_default, 4)), step=float(round(share_step, 4)))
+    share_umbral_pct = st.sidebar.slider(f"Umbral {share_label}", min_value=0.0, max_value=share_max, value=float(round(share_default, 4)), step=float(round(share_step, 4)))
+
+    if y_metric_option == "Dias >15":
+        y_axis_title = "% del total de dias >15 (logit)"
+    else:
+        y_axis_title = "% del total de dias (logit)"
 
     scatter_kwargs = dict(
         data_frame=df_incluidos,
         x='S1_hibrida',
-        y='share_total_logit',
+        y=share_logit_target,
         size='size_dias',
         hover_data={
             COL_DIAG: True,
             COL_CAPITULO: True,
             COL_SHARE_TOTAL_EPIS: ':.4%',
             COL_PCT_EPI_GT15: ':.2%',
+            'share_dias_pct': ':.4%',
+            'share_dias15_pct': ':.4%',
             COL_DURACION_MEDIA: ':.1f',
             COL_TOTAL_EPIS: ':,',
             COL_TOTAL_DIAS: ':,',
             'S1_hibrida': ':.2f',
             'esperado_pct': ':.2%',
             'lift_pct': ':.2%',
+            'impacto_delta': ':,.0f',
         },
         size_max=60,
     )
@@ -355,7 +390,7 @@ else:
     fig_prior.update_layout(
         title="Priorizar diagnosticos incluidos",
         xaxis_title="Severidad S1h = duracion media * [(1 - phi) + phi*(%>15)^a + psi*lift]",
-        yaxis_title="% del total de episodios (logit)",
+        yaxis_title=y_axis_title,
         template="plotly_white",
         margin=dict(l=40, r=20, t=60, b=60),
         showlegend=False,
@@ -375,14 +410,14 @@ else:
     fig_prior.add_vline(x=severidad_umbral, line_dash='dash', line_color='gray', annotation_text='Umbral S1h', annotation_position='top left')
     share_umbral_prop = share_umbral_pct / 100 if share_umbral_pct else 0.0
     share_umbral_logit = logit(share_umbral_prop) if share_umbral_prop else logit(1e-6)
-    fig_prior.add_hline(y=share_umbral_logit, line_dash='dash', line_color='gray', annotation_text=f'Umbral % episodios ({share_umbral_pct:.4f}%)', annotation_position='bottom right')
+    fig_prior.add_hline(y=share_umbral_logit, line_dash='dash', line_color='gray', annotation_text=f'Umbral {share_label} ({share_umbral_pct:.4f}%)', annotation_position='bottom right')
     st.plotly_chart(fig_prior, use_container_width=True)
 
-    df_cuadrante = df_incluidos[(df_incluidos['S1_hibrida'] >= severidad_umbral) & (df_incluidos['share_total_pct'] >= share_umbral_pct) & (df_incluidos[COL_TOTAL_EPIS] >= episodios_min)].copy()
+    df_cuadrante = df_incluidos[(df_incluidos['S1_hibrida'] >= severidad_umbral) & (df_incluidos[share_pct_column] >= share_umbral_pct) & (df_incluidos[COL_TOTAL_EPIS] >= episodios_min)].copy()
 
     st.markdown("#### Diagnosticos priorizados (cuadrante)")
     if df_cuadrante.empty:
-        st.info("Ningun diagnostico supera simultaneamente los umbrales de severidad S1h y % del total de episodios.")
+        st.info(f"Ningun diagnostico supera simultaneamente los umbrales de severidad S1h y {share_label}.")
     else:
         diag_sel = int(df_cuadrante.shape[0])
         epis_sel = int(df_cuadrante[COL_TOTAL_EPIS].sum())
@@ -416,9 +451,12 @@ else:
             'esperado_pct',
             'lift_pct',
             'share_total_pct',
+            'share_dias_pct',
+            'share_dias15_pct',
+            'impacto_delta',
             'S1_hibrida',
         ]].copy()
-        df_tabla = df_tabla.sort_values('share_total_pct', ascending=False)
+        df_tabla = df_tabla.sort_values('impacto_delta', ascending=False)
         totales = {
             COL_DIAG: 'TOTAL',
             COL_CAPITULO: '',
@@ -429,25 +467,34 @@ else:
             'duracion_media': df_tabla['duracion_media'].mean(),
             'share_gt15_pct': df_tabla['share_gt15_pct'].mean(),
             'share_total_pct': df_tabla['share_total_pct'].sum(),
+            'share_dias_pct': (df_tabla[COL_TOTAL_DIAS].sum() / total_dias_global * 100) if total_dias_global else 0.0,
+            'share_dias15_pct': (df_tabla[COL_DIAS_GT15].sum() / total_dias_gt15_global * 100) if total_dias_gt15_global else 0.0,
             'esperado_pct': df_tabla['esperado_pct'].mean(),
             'lift_pct': df_tabla['lift_pct'].mean(),
+            'impacto_delta': df_tabla['impacto_delta'].sum(),
             'S1_hibrida': df_tabla['S1_hibrida'].mean(),
         }
         df_tabla = pd.concat([df_tabla, pd.DataFrame([totales])], ignore_index=True)
         df_tabla_format = df_tabla.rename(columns={
             'duracion_media': 'Tod durac media',
             'share_gt15_pct': '%TotEpis>15dias (%)',
+            'share_dias_pct': '%Dias totales (%)',
+            'share_dias15_pct': '%Dias >15 (%)',
             'esperado_pct': 'E[%>15 | media]',
             'lift_pct': 'Lift %>15',
             'share_total_pct': '%Totsobre total epis (%)',
+            'impacto_delta': 'Impacto delta (dias)',
             'S1_hibrida': 'S1h',
         }).copy()
         df_tabla_format['%TotEpis>15dias (%)'] = df_tabla_format['%TotEpis>15dias (%)'].round(2)
-        df_tabla_format['E[%>15 | media]'] = (df_tabla_format['E[%>15 | media]'] * 100).round(2)
-        df_tabla_format['Lift %>15'] = (df_tabla_format['Lift %>15'] * 100).round(2)
+        df_tabla_format['%Dias totales (%)'] = df_tabla_format['%Dias totales (%)'].round(4)
+        df_tabla_format['%Dias >15 (%)'] = df_tabla_format['%Dias >15 (%)'].round(4)
         df_tabla_format['%Totsobre total epis (%)'] = df_tabla_format['%Totsobre total epis (%)'].round(4)
+        df_tabla_format['E[%>15 | media]'] = df_tabla_format['E[%>15 | media]'].round(2)
+        df_tabla_format['Lift %>15'] = df_tabla_format['Lift %>15'].round(2)
         df_tabla_format['Tod durac media'] = df_tabla_format['Tod durac media'].round(1)
         df_tabla_format['S1h'] = df_tabla_format['S1h'].round(2)
+        df_tabla_format['Impacto delta (dias)'] = df_tabla_format['Impacto delta (dias)'].round(2)
         for col in [COL_TOTAL_EPIS, COL_TOTAL_DIAS, COL_DIAS_GT15]:
             df_tabla_format[col] = df_tabla_format[col].astype('Int64')
         st.dataframe(df_tabla_format, use_container_width=True, hide_index=True)
@@ -465,6 +512,9 @@ else:
             'esperado_pct',
             'lift_pct',
             'share_total_pct',
+            'share_dias_pct',
+            'share_dias15_pct',
+            'impacto_delta',
             'S1_hibrida',
         ]].copy()
 
@@ -472,7 +522,7 @@ else:
         if df_principal_fuera.empty:
             st.info('Ningun diagnostico de tipo PRINCIPAL queda fuera del cuadrante con los umbrales actuales.')
         else:
-            df_principal_fuera = df_principal_fuera.sort_values('share_total_pct', ascending=False)
+            df_principal_fuera = df_principal_fuera.sort_values('impacto_delta', ascending=False)
             totales_fuera = {
                 COL_DIAG: 'TOTAL',
                 COL_CAPITULO: '',
@@ -481,26 +531,35 @@ else:
                 COL_DIAS_GT15: int(df_principal_fuera[COL_DIAS_GT15].sum()),
                 'duracion_media': df_principal_fuera['duracion_media'].mean(),
                 'share_gt15_pct': df_principal_fuera['share_gt15_pct'].mean(),
+                'share_total_pct': df_principal_fuera['share_total_pct'].sum(),
+                'share_dias_pct': (df_principal_fuera[COL_TOTAL_DIAS].sum() / total_dias_global * 100) if total_dias_global else 0.0,
+                'share_dias15_pct': (df_principal_fuera[COL_DIAS_GT15].sum() / total_dias_gt15_global * 100) if total_dias_gt15_global else 0.0,
                 'esperado_pct': df_principal_fuera['esperado_pct'].mean(),
                 'lift_pct': df_principal_fuera['lift_pct'].mean(),
-                'share_total_pct': df_principal_fuera['share_total_pct'].sum(),
+                'impacto_delta': df_principal_fuera['impacto_delta'].sum(),
                 'S1_hibrida': df_principal_fuera['S1_hibrida'].mean(),
             }
             df_principal_fuera = pd.concat([df_principal_fuera, pd.DataFrame([totales_fuera])], ignore_index=True)
             df_principal_format = df_principal_fuera.rename(columns={
                 'duracion_media': 'Tod durac media',
                 'share_gt15_pct': '%TotEpis>15dias (%)',
+                'share_dias_pct': '%Dias totales (%)',
+                'share_dias15_pct': '%Dias >15 (%)',
                 'esperado_pct': 'E[%>15 | media]',
                 'lift_pct': 'Lift %>15',
                 'share_total_pct': '%Totsobre total epis (%)',
+                'impacto_delta': 'Impacto delta (dias)',
                 'S1_hibrida': 'S1h',
             }).copy()
             df_principal_format['%TotEpis>15dias (%)'] = df_principal_format['%TotEpis>15dias (%)'].round(2)
-            df_principal_format['E[%>15 | media]'] = (df_principal_format['E[%>15 | media]'] * 100).round(2)
-            df_principal_format['Lift %>15'] = (df_principal_format['Lift %>15'] * 100).round(2)
+            df_principal_format['%Dias totales (%)'] = df_principal_format['%Dias totales (%)'].round(4)
+            df_principal_format['%Dias >15 (%)'] = df_principal_format['%Dias >15 (%)'].round(4)
             df_principal_format['%Totsobre total epis (%)'] = df_principal_format['%Totsobre total epis (%)'].round(4)
+            df_principal_format['E[%>15 | media]'] = df_principal_format['E[%>15 | media]'].round(2)
+            df_principal_format['Lift %>15'] = df_principal_format['Lift %>15'].round(2)
             df_principal_format['Tod durac media'] = df_principal_format['Tod durac media'].round(1)
             df_principal_format['S1h'] = df_principal_format['S1h'].round(2)
+            df_principal_format['Impacto delta (dias)'] = df_principal_format['Impacto delta (dias)'].round(2)
             for col in [COL_TOTAL_EPIS, COL_TOTAL_DIAS, COL_DIAS_GT15]:
                 df_principal_format[col] = df_principal_format[col].astype('Int64')
             st.dataframe(df_principal_format, use_container_width=True, hide_index=True)
