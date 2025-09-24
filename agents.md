@@ -67,16 +67,16 @@ DiagnosticosIBERMUTUA/
 - Clasificacion dinamica ExclNum, ExclDur, Incluido recalculada en vivo segun los sliders
 - Graficos funnel (4 paneles) mostrando evolucion por diagnosticos, episodios, dias totales y dias >15
 - Grafico de eficiencia tipo Pareto con los porcentajes retenidos
-- Matriz de priorizacion interactiva (duracion vs % episodios) con umbrales ajustables y tabla de diagnosticos prioritarios sin leyenda fija
+- Matriz de priorizacion interactiva basada en severidad S1 (duracion media x % episodios >15) y participacion en logit, con umbrales ajustables y tabla de diagnosticos prioritarios sin leyenda fija
 
 ### Otras visualizaciones
 - Diagrama Sankey de distribucion de diagnosticos (version inicial)
 
 ## ESTADO ACTUAL (24/09/2025)
-- Matriz de priorizacion operativa; se eliminó la leyenda lateral y el diagnostico queda solo en los tooltips.
-- Slider de umbral de % episodios con paso 0.01 para permitir ajustes finos.
-- Se retiraron la tabla resumen estatica y el recordatorio fijo de criterios; el dashboard cierra con la tabla priorizada dinamica.
-- KPIs, funnels, Pareto y controles se recalculan correctamente con los filtros actuales; Sankey mantiene la version inicial.
+- Matriz de priorizacion usa severidad S1 (duracion media x % episodios >15) en el eje X y la participacion de episodios en logit para Y; la leyenda lateral permanece desactivada.
+- Sliders de S1 (cuantiles 5-95, default P75) y % del total de episodios (paso 0.0005) gobiernan los cortes del grafico y de la tabla priorizada.
+- Burbuja escala por dias totales (winsor p95) y los hover muestran diagnostico, capitulo y metricas clave en % reales.
+- KPIs, funnels, Pareto y controles siguen recalculando correctamente; Sankey mantiene la version inicial.
 
 ## SIGUIENTES PASOS PROPUESTOS
 1. Validar la experiencia en producción y decidir si hace falta un toggle para mostrar leyendas o agrupar colores.

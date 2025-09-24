@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -15,6 +16,7 @@ COL_DIAS_GT15 = "Dias IT >15 dias"
 COL_DURACION_MEDIA = "Tod durac media"
 COL_PCT_EPI_LT15 = "%TotEpis<15dias"
 COL_PCT_EPI_GT15 = "%TotEpis>15dias"
+COL_SHARE_TOTAL_EPIS = "%Totsobre total epis"
 COL_PCT_DIAS_LT15 = "%Totdias<15d"
 COL_PCT_DIAS_GT15 = "%Totdias>15d"
 
@@ -31,12 +33,6 @@ RENAME_MAP = {
     "%Totdias>15d": COL_PCT_DIAS_GT15,
 }
 
-SIZE_OPTIONS = {
-    "Total de episodios": COL_TOTAL_EPIS,
-    "Dias totales": COL_TOTAL_DIAS,
-    "Dias >15": COL_DIAS_GT15,
-}
-
 COLOR_OPTIONS = {
     "Sin color": None,
     "Capitulo": COL_CAPITULO,
@@ -46,6 +42,12 @@ COLOR_OPTIONS = {
 
 def ratio(value: float, total: float) -> float:
     return (value / total * 100.0) if total else 0.0
+
+
+def logit(p):
+    clipped = np.clip(p, 1e-6, 1 - 1e-6)
+    return np.log(clipped / (1.0 - clipped))
+
 
 @st.cache_data
 def cargar_datos() -> pd.DataFrame:
@@ -253,81 +255,109 @@ df_incluidos = df[df[COL_CATEGORIA] == "Incluido"].copy()
 if df_incluidos.empty:
     st.warning("No hay diagnosticos incluidos con los parametros actuales. Ajusta los filtros iniciales.")
 else:
+    share_total_prop = df_incluidos[COL_SHARE_TOTAL_EPIS].astype(float).clip(1e-6, 1 - 1e-6)
+    pct_gt15_prop = df_incluidos[COL_PCT_EPI_GT15].astype(float).clip(0.0, 1.0)
     df_incluidos = df_incluidos.assign(
-        share_episodios_pct=df_incluidos[COL_TOTAL_EPIS] / metricas["Incluido"]["episodios"] * 100 if metricas["Incluido"]["episodios"] else 0,
-        share_dias15_pct=df_incluidos[COL_DIAS_GT15] / metricas["Incluido"]["dias_mayor_15"] * 100 if metricas["Incluido"]["dias_mayor_15"] else 0,
         duracion_media=df_incluidos[COL_DURACION_MEDIA],
+        share_total_prop=share_total_prop,
+        share_total_pct=share_total_prop * 100,
+        share_gt15_pct=pct_gt15_prop * 100,
+        S1=df_incluidos[COL_DURACION_MEDIA] * pct_gt15_prop,
+        share_total_logit=logit(share_total_prop),
     )
 
-    size_field_key = st.sidebar.selectbox("Tamano burbuja", list(SIZE_OPTIONS.keys()), index=0)
-    size_field = SIZE_OPTIONS[size_field_key]
+    size_cap = float(df_incluidos[COL_TOTAL_DIAS].quantile(0.95))
+    if size_cap <= 0:
+        size_cap = float(df_incluidos[COL_TOTAL_DIAS].max() or 1.0)
+    df_incluidos['size_dias'] = df_incluidos[COL_TOTAL_DIAS].clip(upper=size_cap)
+
     color_choice = st.sidebar.selectbox("Color por", list(COLOR_OPTIONS.keys()), index=1)
     color_field = COLOR_OPTIONS[color_choice]
 
-    dur_min = float(df_incluidos["duracion_media"].min())
-    dur_max = float(df_incluidos["duracion_media"].max())
-    if dur_max <= dur_min:
-        dur_max = dur_min + 1.0
-    dur_default = float(df_incluidos["duracion_media"].median())
-    duracion_umbral = st.sidebar.slider("Umbral duracion media (dias)", min_value=dur_min, max_value=dur_max, value=dur_default, step=0.5)
+    s1_series = df_incluidos['S1']
+    s1_min = float(s1_series.quantile(0.05))
+    s1_max = float(s1_series.quantile(0.95))
+    if s1_max <= s1_min:
+        s1_max = s1_min + 0.1
+    s1_default = float(s1_series.quantile(0.75))
+    if s1_default < s1_min or s1_default > s1_max:
+        s1_default = (s1_min + s1_max) / 2
+    s1_step = max((s1_max - s1_min) / 100, 0.05)
+    severidad_umbral = st.sidebar.slider("Umbral severidad (S1)", min_value=s1_min, max_value=s1_max, value=float(round(s1_default, 3)), step=float(round(s1_step, 3)))
 
-    share_max = float(df_incluidos["share_episodios_pct"].max())
+    share_pct_series = df_incluidos['share_total_pct']
+    share_max = float(share_pct_series.quantile(0.95))
     if share_max <= 0:
-        share_max = 1.0
-    share_default = float(df_incluidos["share_episodios_pct"].median())
-    share_umbral_pct = st.sidebar.slider("Umbral % de episodios", min_value=0.0, max_value=share_max, value=share_default, step=0.01)
+        share_max = float(share_pct_series.max() or 0.1)
+    share_default = float(share_pct_series.quantile(0.75))
+    if share_default > share_max:
+        share_default = share_max
+    share_step = max(share_max / 200, 0.0005)
+    share_umbral_pct = st.sidebar.slider("Umbral % del total de episodios", min_value=0.0, max_value=share_max, value=float(round(share_default, 4)), step=float(round(share_step, 4)))
 
     scatter_kwargs = dict(
         data_frame=df_incluidos,
-        x="duracion_media",
-        y="share_episodios_pct",
-        size=size_field,
+        x='S1',
+        y='share_total_logit',
+        size='size_dias',
         hover_data={
             COL_DIAG: True,
-            COL_TOTAL_EPIS: ":,",
-            "share_episodios_pct": ":.2f",
-            "share_dias15_pct": ":.2f",
-            "duracion_media": ":.1f",
-            COL_DIAS_GT15: ":,",
+            COL_CAPITULO: True,
+            COL_SHARE_TOTAL_EPIS: ':.4%',
+            COL_PCT_EPI_GT15: ':.2%',
+            COL_DURACION_MEDIA: ':.1f',
+            COL_TOTAL_EPIS: ':,',
+            COL_TOTAL_DIAS: ':,',
+            'S1': ':.2f',
         },
         size_max=60,
     )
     if color_field is not None:
-        scatter_kwargs["color"] = df_incluidos[color_field]
+        scatter_kwargs['color'] = df_incluidos[color_field]
 
     fig_prior = px.scatter(**scatter_kwargs)
-    fig_prior.update_traces(marker=dict(opacity=0.75, line=dict(width=0.5, color="#333")))
+    fig_prior.update_traces(marker=dict(opacity=0.75, line=dict(width=0.5, color='#333')))
     fig_prior.update_layout(
         title="Priorizar diagnosticos incluidos",
-        xaxis_title="Duracion media del episodio (dias)",
-        yaxis_title="% del total de episodios (diagnosticos incluidos)",
+        xaxis_title="Severidad S1 = Duracion media x % episodios >15",
+        yaxis_title="% del total de episodios (escala logit)",
         template="plotly_white",
         margin=dict(l=40, r=20, t=60, b=60),
         showlegend=False,
     )
-    fig_prior.update_yaxes(ticksuffix="%")
-    fig_prior.add_vline(x=duracion_umbral, line_dash="dash", line_color="gray", annotation_text="Umbral duracion", annotation_position="top left")
-    fig_prior.add_hline(y=share_umbral_pct, line_dash="dash", line_color="gray", annotation_text="Umbral % episodios", annotation_position="bottom right")
+
+    min_prop = float(df_incluidos['share_total_prop'].min())
+    max_prop = float(df_incluidos['share_total_prop'].max())
+    candidate_perc = np.array([0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50])
+    tick_props = candidate_perc[(candidate_perc / 100 >= min_prop) & (candidate_perc / 100 <= max_prop)] / 100
+    if tick_props.size == 0:
+        tick_props = np.array([min_prop, max_prop])
+    tick_props = np.clip(tick_props, 1e-6, 1 - 1e-6)
+    tick_vals = logit(tick_props)
+    tick_text = [f"{prop * 100:.4f}%" if prop < 0.01 else f"{prop * 100:.2f}%" for prop in tick_props]
+    fig_prior.update_yaxes(tickmode='array', tickvals=tick_vals, ticktext=tick_text)
+
+    fig_prior.add_vline(x=severidad_umbral, line_dash='dash', line_color='gray', annotation_text='Umbral S1', annotation_position='top left')
+    share_umbral_prop = share_umbral_pct / 100 if share_umbral_pct else 0.0
+    share_umbral_logit = logit(share_umbral_prop) if share_umbral_prop else logit(1e-6)
+    fig_prior.add_hline(y=share_umbral_logit, line_dash='dash', line_color='gray', annotation_text=f'Umbral % episodios ({share_umbral_pct:.4f}%)', annotation_position='bottom right')
     st.plotly_chart(fig_prior, use_container_width=True)
 
-    df_cuadrante = df_incluidos[
-        (df_incluidos["duracion_media"] >= duracion_umbral)
-        & (df_incluidos["share_episodios_pct"] >= share_umbral_pct)
-    ].copy()
+    df_cuadrante = df_incluidos[(df_incluidos['S1'] >= severidad_umbral) & (df_incluidos['share_total_pct'] >= share_umbral_pct)].copy()
 
     st.markdown("#### Diagnosticos priorizados (cuadrante)")
     if df_cuadrante.empty:
-        st.info("Ningun diagnostico cumple simultaneamente los umbrales de duracion y porcentaje de episodios.")
+        st.info("Ningun diagnostico supera simultaneamente los umbrales de severidad S1 y % del total de episodios.")
     else:
         diag_sel = int(df_cuadrante.shape[0])
         epis_sel = int(df_cuadrante[COL_TOTAL_EPIS].sum())
         dias_sel = int(df_cuadrante[COL_TOTAL_DIAS].sum())
         dias15_sel = int(df_cuadrante[COL_DIAS_GT15].sum())
 
-        total_diag_incl = metricas["Incluido"]["diagnosticos"]
-        total_epi_incl = metricas["Incluido"]["episodios"]
-        total_dias_incl = metricas["Incluido"]["dias"]
-        total_dias15_incl = metricas["Incluido"]["dias_mayor_15"]
+        total_diag_incl = metricas['Incluido']['diagnosticos']
+        total_epi_incl = metricas['Incluido']['episodios']
+        total_dias_incl = metricas['Incluido']['dias']
+        total_dias15_incl = metricas['Incluido']['dias_mayor_15']
 
         c1, c2, c3, c4 = st.columns(4)
         with c1:
@@ -346,14 +376,22 @@ else:
             COL_TOTAL_EPIS,
             COL_TOTAL_DIAS,
             COL_DIAS_GT15,
-            "duracion_media",
-            "share_episodios_pct",
-            "share_dias15_pct",
+            'duracion_media',
+            'share_gt15_pct',
+            'share_total_pct',
+            'S1',
         ]].copy()
-        df_tabla[COL_TOTAL_EPIS] = df_tabla[COL_TOTAL_EPIS].apply(lambda x: f"{int(x):,}")
-        df_tabla[COL_TOTAL_DIAS] = df_tabla[COL_TOTAL_DIAS].apply(lambda x: f"{int(x):,}")
-        df_tabla[COL_DIAS_GT15] = df_tabla[COL_DIAS_GT15].apply(lambda x: f"{int(x):,}")
-        df_tabla["duracion_media"] = df_tabla["duracion_media"].apply(lambda x: f"{x:.1f}")
-        df_tabla["share_episodios_pct"] = df_tabla["share_episodios_pct"].apply(lambda x: f"{x:.2f}%")
-        df_tabla["share_dias15_pct"] = df_tabla["share_dias15_pct"].apply(lambda x: f"{x:.2f}%")
-        st.dataframe(df_tabla.sort_values("share_episodios_pct", ascending=False), use_container_width=True, hide_index=True)
+        df_tabla = df_tabla.sort_values('share_total_pct', ascending=False)
+        df_tabla_format = df_tabla.rename(columns={
+            'duracion_media': 'Tod durac media',
+            'share_gt15_pct': '%TotEpis>15dias (%)',
+            'share_total_pct': '%Totsobre total epis (%)',
+        }).copy()
+        df_tabla_format[COL_TOTAL_EPIS] = df_tabla_format[COL_TOTAL_EPIS].apply(lambda x: f"{int(x):,}")
+        df_tabla_format[COL_TOTAL_DIAS] = df_tabla_format[COL_TOTAL_DIAS].apply(lambda x: f"{int(x):,}")
+        df_tabla_format[COL_DIAS_GT15] = df_tabla_format[COL_DIAS_GT15].apply(lambda x: f"{int(x):,}")
+        df_tabla_format['Tod durac media'] = df_tabla_format['Tod durac media'].apply(lambda x: f"{x:.1f}")
+        df_tabla_format['%TotEpis>15dias (%)'] = df_tabla_format['%TotEpis>15dias (%)'].apply(lambda x: f"{x:.2f}%")
+        df_tabla_format['%Totsobre total epis (%)'] = df_tabla_format['%Totsobre total epis (%)'].apply(lambda x: f"{x:.4f}%")
+        df_tabla_format['S1'] = df_tabla_format['S1'].apply(lambda x: f"{x:.2f}")
+        st.dataframe(df_tabla_format, use_container_width=True, hide_index=True)
