@@ -442,15 +442,14 @@ else:
             'share_total_pct': '%Totsobre total epis (%)',
             'S1_hibrida': 'S1h',
         }).copy()
-        df_tabla_format[COL_TOTAL_EPIS] = df_tabla_format[COL_TOTAL_EPIS].apply(lambda x: f"{int(x):,}" if pd.notna(x) else '')
-        df_tabla_format[COL_TOTAL_DIAS] = df_tabla_format[COL_TOTAL_DIAS].apply(lambda x: f"{int(x):,}" if pd.notna(x) else '')
-        df_tabla_format[COL_DIAS_GT15] = df_tabla_format[COL_DIAS_GT15].apply(lambda x: f"{int(x):,}" if pd.notna(x) else '')
-        df_tabla_format['Tod durac media'] = df_tabla_format['Tod durac media'].apply(lambda x: f"{x:.1f}" if pd.notna(x) else '')
-        df_tabla_format['%TotEpis>15dias (%)'] = df_tabla_format['%TotEpis>15dias (%)'].apply(lambda x: f"{x:.2f}%" if pd.notna(x) else '')
-        df_tabla_format['%Totsobre total epis (%)'] = df_tabla_format['%Totsobre total epis (%)'].apply(lambda x: f"{x:.4f}%" if pd.notna(x) else '')
-        df_tabla_format['E[%>15 | media]'] = df_tabla_format['E[%>15 | media]'].apply(lambda x: f"{x * 100:.2f}%" if pd.notna(x) else '')
-        df_tabla_format['Lift %>15'] = df_tabla_format['Lift %>15'].apply(lambda x: f"{x * 100:.2f}%" if pd.notna(x) else '')
-        df_tabla_format['S1h'] = df_tabla_format['S1h'].apply(lambda x: f"{x:.2f}" if pd.notna(x) else '')
+        df_tabla_format['%TotEpis>15dias (%)'] = (df_tabla_format['%TotEpis>15dias (%)'] * 100).round(2)
+        df_tabla_format['E[%>15 | media]'] = (df_tabla_format['E[%>15 | media]'] * 100).round(2)
+        df_tabla_format['Lift %>15'] = (df_tabla_format['Lift %>15'] * 100).round(2)
+        df_tabla_format['%Totsobre total epis (%)'] = df_tabla_format['%Totsobre total epis (%)'].round(4)
+        df_tabla_format['Tod durac media'] = df_tabla_format['Tod durac media'].round(1)
+        df_tabla_format['S1h'] = df_tabla_format['S1h'].round(2)
+        for col in [COL_TOTAL_EPIS, COL_TOTAL_DIAS, COL_DIAS_GT15]:
+            df_tabla_format[col] = df_tabla_format[col].astype('Int64')
         st.dataframe(df_tabla_format, use_container_width=True, hide_index=True)
 
         tipo_norm = df_incluidos[COL_TIPO].astype(str).str.strip().str.lower()
@@ -496,13 +495,12 @@ else:
                 'share_total_pct': '%Totsobre total epis (%)',
                 'S1_hibrida': 'S1h',
             }).copy()
-            df_principal_format[COL_TOTAL_EPIS] = df_principal_format[COL_TOTAL_EPIS].apply(lambda x: f"{int(x):,}" if pd.notna(x) else '')
-            df_principal_format[COL_TOTAL_DIAS] = df_principal_format[COL_TOTAL_DIAS].apply(lambda x: f"{int(x):,}" if pd.notna(x) else '')
-            df_principal_format[COL_DIAS_GT15] = df_principal_format[COL_DIAS_GT15].apply(lambda x: f"{int(x):,}" if pd.notna(x) else '')
-            df_principal_format['Tod durac media'] = df_principal_format['Tod durac media'].apply(lambda x: f"{x:.1f}" if pd.notna(x) else '')
-            df_principal_format['%TotEpis>15dias (%)'] = df_principal_format['%TotEpis>15dias (%)'].apply(lambda x: f"{x:.2f}%" if pd.notna(x) else '')
-            df_principal_format['%Totsobre total epis (%)'] = df_principal_format['%Totsobre total epis (%)'].apply(lambda x: f"{x:.4f}%" if pd.notna(x) else '')
-            df_principal_format['E[%>15 | media]'] = df_principal_format['E[%>15 | media]'].apply(lambda x: f"{x * 100:.2f}%" if pd.notna(x) else '')
-            df_principal_format['Lift %>15'] = df_principal_format['Lift %>15'].apply(lambda x: f"{x * 100:.2f}%" if pd.notna(x) else '')
-            df_principal_format['S1h'] = df_principal_format['S1h'].apply(lambda x: f"{x:.2f}" if pd.notna(x) else '')
+            df_principal_format['%TotEpis>15dias (%)'] = (df_principal_format['%TotEpis>15dias (%)'] * 100).round(2)
+            df_principal_format['E[%>15 | media]'] = (df_principal_format['E[%>15 | media]'] * 100).round(2)
+            df_principal_format['Lift %>15'] = (df_principal_format['Lift %>15'] * 100).round(2)
+            df_principal_format['%Totsobre total epis (%)'] = df_principal_format['%Totsobre total epis (%)'].round(4)
+            df_principal_format['Tod durac media'] = df_principal_format['Tod durac media'].round(1)
+            df_principal_format['S1h'] = df_principal_format['S1h'].round(2)
+            for col in [COL_TOTAL_EPIS, COL_TOTAL_DIAS, COL_DIAS_GT15]:
+                df_principal_format[col] = df_principal_format[col].astype('Int64')
             st.dataframe(df_principal_format, use_container_width=True, hide_index=True)
