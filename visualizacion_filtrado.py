@@ -409,7 +409,8 @@ else:
         df_tabla_format['S1'] = df_tabla_format['S1'].apply(lambda x: f"{x:.2f}" if pd.notna(x) else '')
         st.dataframe(df_tabla_format, use_container_width=True, hide_index=True)
 
-        restantes_mask = (df_incluidos[COL_TIPO] == 'PRINCIPAL') & (~df_incluidos.index.isin(df_cuadrante.index))
+        tipo_norm = df_incluidos[COL_TIPO].astype(str).str.strip().str.lower()
+        restantes_mask = (tipo_norm == 'principal') & (~df_incluidos.index.isin(df_cuadrante.index))
         df_principal_fuera = df_incluidos[restantes_mask][[
             COL_DIAG,
             COL_CAPITULO,
