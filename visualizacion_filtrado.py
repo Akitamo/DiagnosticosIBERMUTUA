@@ -442,7 +442,7 @@ else:
             'share_total_pct': '%Totsobre total epis (%)',
             'S1_hibrida': 'S1h',
         }).copy()
-        df_tabla_format['%TotEpis>15dias (%)'] = (df_tabla_format['%TotEpis>15dias (%)'] * 100).round(2)
+        df_tabla_format['%TotEpis>15dias (%)'] = df_tabla_format['%TotEpis>15dias (%)'].round(2)
         df_tabla_format['E[%>15 | media]'] = (df_tabla_format['E[%>15 | media]'] * 100).round(2)
         df_tabla_format['Lift %>15'] = (df_tabla_format['Lift %>15'] * 100).round(2)
         df_tabla_format['%Totsobre total epis (%)'] = df_tabla_format['%Totsobre total epis (%)'].round(4)
@@ -495,7 +495,7 @@ else:
                 'share_total_pct': '%Totsobre total epis (%)',
                 'S1_hibrida': 'S1h',
             }).copy()
-            df_principal_format['%TotEpis>15dias (%)'] = (df_principal_format['%TotEpis>15dias (%)'] * 100).round(2)
+            df_principal_format['%TotEpis>15dias (%)'] = df_principal_format['%TotEpis>15dias (%)'].round(2)
             df_principal_format['E[%>15 | media]'] = (df_principal_format['E[%>15 | media]'] * 100).round(2)
             df_principal_format['Lift %>15'] = (df_principal_format['Lift %>15'] * 100).round(2)
             df_principal_format['%Totsobre total epis (%)'] = df_principal_format['%Totsobre total epis (%)'].round(4)
