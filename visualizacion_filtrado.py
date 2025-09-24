@@ -275,15 +275,15 @@ else:
     if share_max <= 0:
         share_max = 1.0
     share_default = float(df_incluidos["share_episodios_pct"].median())
-    share_umbral_pct = st.sidebar.slider("Umbral % de episodios", min_value=0.0, max_value=share_max, value=share_default, step=0.1)
+    share_umbral_pct = st.sidebar.slider("Umbral % de episodios", min_value=0.0, max_value=share_max, value=share_default, step=0.01)
 
     scatter_kwargs = dict(
         data_frame=df_incluidos,
         x="duracion_media",
         y="share_episodios_pct",
         size=size_field,
-        hover_name=COL_DIAG,
         hover_data={
+            COL_DIAG: True,
             COL_TOTAL_EPIS: ":,",
             "share_episodios_pct": ":.2f",
             "share_dias15_pct": ":.2f",
@@ -303,6 +303,7 @@ else:
         yaxis_title="% del total de episodios (diagnosticos incluidos)",
         template="plotly_white",
         margin=dict(l=40, r=20, t=60, b=60),
+        showlegend=False,
     )
     fig_prior.update_yaxes(ticksuffix="%")
     fig_prior.add_vline(x=duracion_umbral, line_dash="dash", line_color="gray", annotation_text="Umbral duracion", annotation_position="top left")
@@ -356,52 +357,3 @@ else:
         df_tabla["share_episodios_pct"] = df_tabla["share_episodios_pct"].apply(lambda x: f"{x:.2f}%")
         df_tabla["share_dias15_pct"] = df_tabla["share_dias15_pct"].apply(lambda x: f"{x:.2f}%")
         st.dataframe(df_tabla.sort_values("share_episodios_pct", ascending=False), use_container_width=True, hide_index=True)
-st.markdown("---")
-st.markdown("### Tabla Resumen Detallada")
-
-resumen_df = pd.DataFrame({
-    'Categoria': ['Total', 'Incluido', 'ExclNum', 'ExclDur'],
-    'Diagnosticos': [
-        metricas['Total']['diagnosticos'],
-        metricas['Incluido']['diagnosticos'],
-        metricas['ExclNum']['diagnosticos'],
-        metricas['ExclDur']['diagnosticos']
-    ],
-    'Episodios': [
-        metricas['Total']['episodios'],
-        metricas['Incluido']['episodios'],
-        metricas['ExclNum']['episodios'],
-        metricas['ExclDur']['episodios']
-    ],
-    'Dias Totales': [
-        metricas['Total']['dias'],
-        metricas['Incluido']['dias'],
-        metricas['ExclNum']['dias'],
-        metricas['ExclDur']['dias']
-    ],
-    'Dias >15': [
-        metricas['Total']['dias_mayor_15'],
-        metricas['Incluido']['dias_mayor_15'],
-        metricas['ExclNum']['dias_mayor_15'],
-        metricas['ExclDur']['dias_mayor_15']
-    ]
-})
-
-for col in ['Episodios', 'Dias Totales', 'Dias >15']:
-    total_valor = resumen_df[col].iloc[0]
-    resumen_df[f'% {col}'] = (resumen_df[col] / total_valor * 100).round(1)
-
-for col in ['Diagnosticos', 'Episodios', 'Dias Totales', 'Dias >15']:
-    resumen_df[col] = resumen_df[col].apply(lambda x: f"{int(x):,}")
-
-st.dataframe(resumen_df, use_container_width=True, hide_index=True)
-
-st.markdown("---")
-st.info(
-    """
-**Criterios de exclusion aplicados:**
-- **ExclNum**: Diagnosticos con menos de 500 episodios en 10 años
-- **ExclDur**: Duracion media <15 dias y porcentaje de episodios <=15 dias > 90%
-- **Incluido**: No cumple ningun criterio de exclusion (gestion prioritaria)
-"""
-)
