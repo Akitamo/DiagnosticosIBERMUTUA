@@ -143,7 +143,12 @@ st.sidebar.caption(
     "El resto pasa a ExclDur si su duracion media es inferior al umbral y el porcentaje de episodios cortos supera el limite."
 )
 
+excluir_tipo_ex2000 = st.sidebar.checkbox("Excluir Tipo EXCLUIDO_2000", value=True)
+
 df = clasificar(df_base, episodios_min, duracion_max, pct_cortos)
+if excluir_tipo_ex2000:
+    tipo_normalizado = df[COL_TIPO].astype(str).str.strip().str.lower()
+    df = df[tipo_normalizado != 'excluido_2000'].copy()
 metricas = obtener_metricas(df)
 
 porc_diag_incluidos = ratio(metricas["Incluido"]["diagnosticos"], metricas["Total"]["diagnosticos"])
