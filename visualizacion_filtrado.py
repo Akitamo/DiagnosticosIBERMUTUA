@@ -34,11 +34,12 @@ RENAME_MAP = {
     "%Totdias>15d": COL_PCT_DIAS_GT15,
 }
 
-COLOR_OPTIONS = {
-    "Sin color": None,
-    "Capitulo": COL_CAPITULO,
-    "Tipo": COL_TIPO,
-}
+COLOR_OPTIONS = [
+    {"label": "Percentil % epis >15", "value": "pct_gt15_percentil", "type": "continuous"},
+    {"label": "Capitulo", "value": COL_CAPITULO, "type": "categorical"},
+    {"label": "Tipo", "value": COL_TIPO, "type": "categorical"},
+    {"label": "Sin color", "value": None, "type": "none"},
+]
 
 
 def ratio(value: float, total: float) -> float:
@@ -183,6 +184,7 @@ pct_gt15_prop = df_filtrado[COL_PCT_EPI_GT15].astype(float)
 if pct_gt15_prop.max() > 1.0:
     pct_gt15_prop = pct_gt15_prop / 100.0
 pct_gt15_prop = pct_gt15_prop.clip(0.0, 1.0)
+pct_gt15_percentil = pct_gt15_prop.rank(pct=True, method='average').fillna(0.0) * 100
 
 share_total_prop = df_filtrado[COL_SHARE_TOTAL_EPIS].astype(float).clip(1e-6, 1 - 1e-6)
 share_dias_prop = df_filtrado[COL_TOTAL_DIAS] / total_dias_base if total_dias_base else 0.0
@@ -211,6 +213,7 @@ df_trabajo = df_filtrado.assign(
     esperado_pct=esperado_pct,
     lift_pct=lift_pct,
     impacto_delta=impacto_delta,
+    pct_gt15_percentil=pct_gt15_percentil,
 )
 
 size_cap = float(df_trabajo[COL_TOTAL_DIAS].quantile(0.95))
@@ -218,8 +221,11 @@ if size_cap <= 0:
     size_cap = float(df_trabajo[COL_TOTAL_DIAS].max() or 1.0)
 df_trabajo['size_dias'] = df_trabajo[COL_TOTAL_DIAS].clip(upper=size_cap)
 
-color_choice = st.sidebar.selectbox("Color por", list(COLOR_OPTIONS.keys()), index=1)
-color_field = COLOR_OPTIONS[color_choice]
+color_labels = [opt["label"] for opt in COLOR_OPTIONS]
+color_choice_label = st.sidebar.selectbox("Color por", color_labels, index=0)
+color_option = next(opt for opt in COLOR_OPTIONS if opt["label"] == color_choice_label)
+color_field = color_option["value"]
+color_mode = color_option["type"]
 
 dur_series = df_trabajo[COL_DURACION_MEDIA]
 if dur_series.dropna().empty:
@@ -295,14 +301,20 @@ scatter_kwargs = dict(
         'share_total_pct': ':.4%',
         'esperado_pct': ':.2%',
         'lift_pct': ':.2%',
+        'pct_gt15_percentil': ':.1f',
         'impacto_delta': ':,.0f',
     },
     size_max=60,
 )
 if color_field is not None:
     scatter_kwargs['color'] = df_trabajo[color_field]
+    if color_mode == 'continuous':
+        scatter_kwargs['color_continuous_scale'] = 'YlOrRd'
+        scatter_kwargs['range_color'] = (0, 100)
 
 fig_prior = px.scatter(**scatter_kwargs)
+if color_field is not None and color_mode == 'continuous':
+    fig_prior.update_coloraxes(colorbar_title='% epis >15 (percentil)')
 fig_prior.update_traces(marker=dict(opacity=0.75, line=dict(width=0.5, color='#333')))
 fig_prior.update_layout(
     title="Priorizar diagnosticos incluidos",
