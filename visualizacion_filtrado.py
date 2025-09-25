@@ -346,16 +346,11 @@ else:
         COL_TOTAL_EPIS,
         COL_TOTAL_DIAS,
         COL_DIAS_GT15,
-        'duracion_media',
-        'share_gt15_pct',
-        'esperado_pct',
-        'lift_pct',
-        'share_total_pct',
-        'share_dias_pct',
-        'share_dias15_pct',
-        'impacto_delta',
+        COL_DURACION_MEDIA,
+        COL_PCT_EPI_GT15,
+        COL_SHARE_TOTAL_EPIS,
     ]].copy()
-    df_tabla = df_tabla.sort_values('impacto_delta', ascending=False)
+    df_tabla = df_tabla.sort_values(COL_TOTAL_EPIS, ascending=False)
     totales = {
         COL_DIAG: 'TOTAL',
         COL_CAPITULO: '',
@@ -363,9 +358,9 @@ else:
         COL_TOTAL_EPIS: int(df_tabla[COL_TOTAL_EPIS].sum()),
         COL_TOTAL_DIAS: int(df_tabla[COL_TOTAL_DIAS].sum()),
         COL_DIAS_GT15: int(df_tabla[COL_DIAS_GT15].sum()),
-        'duracion_media': df_tabla['duracion_media'].mean(),
-        'share_gt15_pct': df_tabla['share_gt15_pct'].mean(),
-        'share_total_pct': df_tabla['share_total_pct'].sum(),
+        COL_DURACION_MEDIA: df_tabla[COL_DURACION_MEDIA].mean(),
+        COL_PCT_EPI_GT15: df_tabla[COL_PCT_EPI_GT15].mean(),
+        COL_SHARE_TOTAL_EPIS: df_tabla[COL_SHARE_TOTAL_EPIS].sum(),
         'share_dias_pct': (df_tabla[COL_TOTAL_DIAS].sum() / total_dias_base * 100) if total_dias_base else 0.0,
         'share_dias15_pct': (df_tabla[COL_DIAS_GT15].sum() / total_dias15_base * 100) if total_dias15_base else 0.0,
         'esperado_pct': df_tabla['esperado_pct'].mean(),
@@ -374,23 +369,13 @@ else:
     }
     df_tabla = pd.concat([df_tabla, pd.DataFrame([totales])], ignore_index=True)
     df_tabla_format = df_tabla.rename(columns={
-        'duracion_media': 'Tod durac media',
-        'share_gt15_pct': '%TotEpis>15dias (%)',
-        'share_total_pct': '%Totsobre total epis (%)',
-        'share_dias_pct': '%Dias totales (%)',
-        'share_dias15_pct': '%Dias >15 (%)',
-        'esperado_pct': 'E[%>15 | media]',
-        'lift_pct': 'Lift %>15',
-        'impacto_delta': 'Impacto delta (dias)',
+        COL_DURACION_MEDIA: 'Tod durac media',
+        COL_PCT_EPI_GT15: '%TotEpis>15dias (%)',
+        COL_SHARE_TOTAL_EPIS: '%Totsobre total epis (%)',
     }).copy()
     df_tabla_format['%TotEpis>15dias (%)'] = df_tabla_format['%TotEpis>15dias (%)'].round(2)
     df_tabla_format['%Totsobre total epis (%)'] = df_tabla_format['%Totsobre total epis (%)'].round(4)
-    df_tabla_format['%Dias totales (%)'] = df_tabla_format['%Dias totales (%)'].round(4)
-    df_tabla_format['%Dias >15 (%)'] = df_tabla_format['%Dias >15 (%)'].round(4)
-    df_tabla_format['E[%>15 | media]'] = (df_tabla_format['E[%>15 | media]'] * 100).round(2)
-    df_tabla_format['Lift %>15'] = (df_tabla_format['Lift %>15'] * 100).round(2)
     df_tabla_format['Tod durac media'] = df_tabla_format['Tod durac media'].round(1)
-    df_tabla_format['Impacto delta (dias)'] = df_tabla_format['Impacto delta (dias)'].round(0)
     for col in [COL_TOTAL_EPIS, COL_TOTAL_DIAS, COL_DIAS_GT15]:
         df_tabla_format[col] = df_tabla_format[col].astype('Int64')
     st.dataframe(df_tabla_format, use_container_width=True, hide_index=True)
@@ -400,24 +385,20 @@ else:
     df_principal_fuera = df_trabajo[restantes_mask][[
         COL_DIAG,
         COL_CAPITULO,
+        COL_TIPO,
         COL_TOTAL_EPIS,
         COL_TOTAL_DIAS,
         COL_DIAS_GT15,
-        'duracion_media',
-        'share_gt15_pct',
-        'esperado_pct',
-        'lift_pct',
-        'share_total_pct',
-        'share_dias_pct',
-        'share_dias15_pct',
-        'impacto_delta',
+        COL_DURACION_MEDIA,
+        COL_PCT_EPI_GT15,
+        COL_SHARE_TOTAL_EPIS,
     ]].copy()
 
     st.markdown('#### Diagnosticos PRINCIPAL fuera del cuadrante')
     if df_principal_fuera.empty:
         st.info('Ningun diagnostico de tipo PRINCIPAL queda fuera del cuadrante con los umbrales actuales.')
     else:
-        df_principal_fuera = df_principal_fuera.sort_values('impacto_delta', ascending=False)
+        df_principal_fuera = df_principal_fuera.sort_values(COL_TOTAL_EPIS, ascending=False)
         totales_fuera = {
             COL_DIAG: 'TOTAL',
             COL_CAPITULO: '',
@@ -427,31 +408,22 @@ else:
             'duracion_media': df_principal_fuera['duracion_media'].mean(),
             'share_gt15_pct': df_principal_fuera['share_gt15_pct'].mean(),
             'share_total_pct': df_principal_fuera['share_total_pct'].sum(),
-            'share_dias_pct': (df_principal_fuera[COL_TOTAL_DIAS].sum() / total_dias_base * 100) if total_dias_base else 0.0,
-            'share_dias15_pct': (df_principal_fuera[COL_DIAS_GT15].sum() / total_dias15_base * 100) if total_dias15_base else 0.0,
+            COL_SHARE_TOTAL_EPIS: df_principal_fuera[COL_SHARE_TOTAL_EPIS].sum(),
+            COL_PCT_EPI_GT15: df_principal_fuera[COL_PCT_EPI_GT15].mean(),
             'esperado_pct': df_principal_fuera['esperado_pct'].mean(),
             'lift_pct': df_principal_fuera['lift_pct'].mean(),
             'impacto_delta': df_principal_fuera['impacto_delta'].sum(),
         }
         df_principal_fuera = pd.concat([df_principal_fuera, pd.DataFrame([totales_fuera])], ignore_index=True)
         df_principal_format = df_principal_fuera.rename(columns={
-            'duracion_media': 'Tod durac media',
-            'share_gt15_pct': '%TotEpis>15dias (%)',
-            'share_total_pct': '%Totsobre total epis (%)',
-            'share_dias_pct': '%Dias totales (%)',
-            'share_dias15_pct': '%Dias >15 (%)',
-            'esperado_pct': 'E[%>15 | media]',
-            'lift_pct': 'Lift %>15',
-            'impacto_delta': 'Impacto delta (dias)',
+            COL_DURACION_MEDIA: 'Tod durac media',
+            COL_PCT_EPI_GT15: '%TotEpis>15dias (%)',
+            COL_SHARE_TOTAL_EPIS: '%Totsobre total epis (%)',
         }).copy()
         df_principal_format['%TotEpis>15dias (%)'] = df_principal_format['%TotEpis>15dias (%)'].round(2)
+        df_principal_format['%TotEpis>15dias (%)'] = df_principal_format['%TotEpis>15dias (%)'].round(2)
         df_principal_format['%Totsobre total epis (%)'] = df_principal_format['%Totsobre total epis (%)'].round(4)
-        df_principal_format['%Dias totales (%)'] = df_principal_format['%Dias totales (%)'].round(4)
-        df_principal_format['%Dias >15 (%)'] = df_principal_format['%Dias >15 (%)'].round(4)
-        df_principal_format['E[%>15 | media]'] = (df_principal_format['E[%>15 | media]'] * 100).round(2)
-        df_principal_format['Lift %>15'] = (df_principal_format['Lift %>15'] * 100).round(2)
         df_principal_format['Tod durac media'] = df_principal_format['Tod durac media'].round(1)
-        df_principal_format['Impacto delta (dias)'] = df_principal_format['Impacto delta (dias)'].round(0)
         for col in [COL_TOTAL_EPIS, COL_TOTAL_DIAS, COL_DIAS_GT15]:
             df_principal_format[col] = df_principal_format[col].astype('Int64')
         st.dataframe(df_principal_format, use_container_width=True, hide_index=True)
