@@ -175,7 +175,6 @@ with col4:
 
 st.markdown("---")
 st.markdown("### Matriz de priorizacion de diagnosticos")
-st.markdown("### Matriz de priorizacion de diagnosticos")
 st.sidebar.markdown("---")
 st.sidebar.subheader("Parametros matriz de priorizacion")
 
@@ -363,33 +362,33 @@ else:
             df_tabla_format[col] = df_tabla_format[col].astype('Int64')
         st.dataframe(df_tabla_format, use_container_width=True, hide_index=True)
 
-    tipo_norm = df_trabajo[COL_TIPO].astype(str).str.strip().str.lower()
-    restantes_mask = (tipo_norm == 'principal') & (~df_trabajo.index.isin(df_cuadrante.index))
-    df_principal_fuera = df_trabajo[restantes_mask][[
-        COL_DIAG,
-        COL_CAPITULO,
-        COL_TIPO,
-        COL_TOTAL_EPIS,
-        COL_TOTAL_DIAS,
-        COL_DIAS_GT15,
-        COL_DURACION_MEDIA,
-        COL_PCT_EPI_GT15,
-        COL_SHARE_TOTAL_EPIS,
-    ]].copy()
+tipo_norm = df_trabajo[COL_TIPO].astype(str).str.strip().str.lower()
+restantes_mask = (tipo_norm == 'principal') & (~df_trabajo.index.isin(df_cuadrante.index))
+df_principal_fuera = df_trabajo[restantes_mask][[
+    COL_DIAG,
+    COL_CAPITULO,
+    COL_TIPO,
+    COL_TOTAL_EPIS,
+    COL_TOTAL_DIAS,
+    COL_DIAS_GT15,
+    COL_DURACION_MEDIA,
+    COL_PCT_EPI_GT15,
+    COL_SHARE_TOTAL_EPIS,
+]].copy()
 
-    st.markdown('#### Diagnosticos PRINCIPAL fuera del cuadrante')
-    if df_principal_fuera.empty:
-        st.info('Ningun diagnostico de tipo PRINCIPAL queda fuera del cuadrante con los umbrales actuales.')
-    else:
-        df_principal_fuera = df_principal_fuera.sort_values(COL_TOTAL_EPIS, ascending=False)
-        df_principal_format = df_principal_fuera.rename(columns={
-            COL_DURACION_MEDIA: 'Tod durac media',
-            COL_PCT_EPI_GT15: '%TotEpis>15dias (%)',
-            COL_SHARE_TOTAL_EPIS: '%Totsobre total epis (%)',
-        }).copy()
-        df_principal_format['%TotEpis>15dias (%)'] = df_principal_format['%TotEpis>15dias (%)'].round(2)
-        df_principal_format['%Totsobre total epis (%)'] = df_principal_format['%Totsobre total epis (%)'].round(4)
-        df_principal_format['Tod durac media'] = df_principal_format['Tod durac media'].round(1)
-        for col in [COL_TOTAL_EPIS, COL_TOTAL_DIAS, COL_DIAS_GT15]:
-            df_principal_format[col] = df_principal_format[col].astype('Int64')
-        st.dataframe(df_principal_format, use_container_width=True, hide_index=True)
+st.markdown('#### Diagnosticos PRINCIPAL fuera del cuadrante')
+if df_principal_fuera.empty:
+    st.info('Ningun diagnostico de tipo PRINCIPAL queda fuera del cuadrante con los umbrales actuales.')
+else:
+    df_principal_fuera = df_principal_fuera.sort_values(COL_TOTAL_EPIS, ascending=False)
+    df_principal_format = df_principal_fuera.rename(columns={
+        COL_DURACION_MEDIA: 'Tod durac media',
+        COL_PCT_EPI_GT15: '%TotEpis>15dias (%)',
+        COL_SHARE_TOTAL_EPIS: '%Totsobre total epis (%)',
+    }).copy()
+    df_principal_format['%TotEpis>15dias (%)'] = df_principal_format['%TotEpis>15dias (%)'].round(2)
+    df_principal_format['%Totsobre total epis (%)'] = df_principal_format['%Totsobre total epis (%)'].round(4)
+    df_principal_format['Tod durac media'] = df_principal_format['Tod durac media'].round(1)
+    for col in [COL_TOTAL_EPIS, COL_TOTAL_DIAS, COL_DIAS_GT15]:
+        df_principal_format[col] = df_principal_format[col].astype('Int64')
+    st.dataframe(df_principal_format, use_container_width=True, hide_index=True)
