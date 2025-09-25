@@ -6,6 +6,8 @@ from plotly.subplots import make_subplots
 import streamlit as st
 import math
 
+st.set_page_config(page_title="Diagnosticos IBERMUTUA", layout="wide")
+
 COL_DIAG = "Diagnostico"
 COL_DESC = "Descripcion"
 COL_CAPITULO = "Capitulo"
@@ -109,7 +111,6 @@ def obtener_metricas(df: pd.DataFrame) -> dict:
 
 df_base = cargar_datos()
 
-st.set_page_config(page_title="Diagnosticos IBERMUTUA", layout="wide")
 st.title("Analisis de Filtrado de Diagnosticos IBERMUTUA")
 st.markdown("### Visualizacion del impacto de los criterios de exclusion")
 
