@@ -44,8 +44,20 @@ COLOR_OPTIONS = [
 ]
 
 
+SIZE_OPTIONS = {
+    "Numero de episodios": COL_TOTAL_EPIS,
+    "Numero de dias": COL_TOTAL_DIAS,
+}
+
+
 def ratio(value: float, total: float) -> float:
     return (value / total * 100.0) if total else 0.0
+
+
+def share_general_text(value: float, total: float) -> str:
+    total_int = int(total) if total else 0
+    porcentaje = ratio(value, total)
+    return f"{porcentaje:.1f}% del total general ({total_int:,})"
 
 
 def logit(p):
@@ -168,13 +180,13 @@ total_dias15_base = int(df_filtrado[COL_DIAS_GT15].sum())
 st.markdown("---")
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    st.metric("Diagnosticos tras filtros", f"{total_diag_base:,}", delta=f"{ratio(total_diag_base, total_diag_global):.1f}% del total original")
+    st.metric("Diagnosticos tras filtros", f"{total_diag_base:,}", delta=share_general_text(total_diag_base, total_diag_global))
 with col2:
-    st.metric("Episodios tras filtros", f"{total_epi_base:,}", delta=f"{ratio(total_epi_base, total_epi_global):.1f}% del total original")
+    st.metric("Episodios tras filtros", f"{total_epi_base:,}", delta=share_general_text(total_epi_base, total_epi_global))
 with col3:
-    st.metric("Dias IT tras filtros", f"{total_dias_base:,}", delta=f"{ratio(total_dias_base, total_dias_global):.1f}% del total original")
+    st.metric("Dias IT tras filtros", f"{total_dias_base:,}", delta=share_general_text(total_dias_base, total_dias_global))
 with col4:
-    st.metric("Dias >15 tras filtros", f"{total_dias15_base:,}", delta=f"{ratio(total_dias15_base, total_dias15_global):.1f}% del total original")
+    st.metric("Dias >15 tras filtros", f"{total_dias15_base:,}", delta=share_general_text(total_dias15_base, total_dias15_global))
 
 st.markdown("---")
 st.markdown("### Matriz de priorizacion de diagnosticos")
@@ -217,10 +229,14 @@ df_trabajo = df_filtrado.assign(
     pct_gt15_percentil=pct_gt15_percentil,
 )
 
-size_cap = float(df_trabajo[COL_TOTAL_DIAS].quantile(0.95))
+size_choices = list(SIZE_OPTIONS.keys())
+size_choice_label = st.sidebar.radio("Tamano burbuja por", size_choices, index=0)
+size_column = SIZE_OPTIONS[size_choice_label]
+size_series = df_trabajo[size_column].astype(float)
+size_cap = float(size_series.quantile(0.95)) if not size_series.empty else 0.0
 if size_cap <= 0:
-    size_cap = float(df_trabajo[COL_TOTAL_DIAS].max() or 1.0)
-df_trabajo['size_dias'] = df_trabajo[COL_TOTAL_DIAS].clip(upper=size_cap)
+    size_cap = float(size_series.max() or 1.0)
+df_trabajo['size_metric'] = size_series.clip(lower=0, upper=size_cap)
 
 color_labels = [opt["label"] for opt in COLOR_OPTIONS]
 color_choice_label = st.sidebar.selectbox("Color por", color_labels, index=0)
@@ -287,7 +303,7 @@ scatter_kwargs = dict(
     data_frame=df_trabajo,
     x=COL_DURACION_MEDIA,
     y=share_logit_target,
-    size='size_dias',
+    size='size_metric',
     hover_data={
         COL_DIAG: True,
         COL_CAPITULO: True,
@@ -355,13 +371,13 @@ else:
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.metric("Diagnosticos priorizados", f"{diag_sel:,}", delta=f"{ratio(diag_sel, total_diag_global):.1f}% del total filtrado")
+        st.metric("Diagnosticos priorizados", f"{diag_sel:,}", delta=share_general_text(diag_sel, total_diag_global))
     with c2:
-        st.metric("Episodios priorizados", f"{epis_sel:,}", delta=f"{ratio(epis_sel, total_epi_global):.1f}% del total filtrado")
+        st.metric("Episodios priorizados", f"{epis_sel:,}", delta=share_general_text(epis_sel, total_epi_global))
     with c3:
-        st.metric("Dias IT priorizados", f"{dias_sel:,}", delta=f"{ratio(dias_sel, total_dias_global):.1f}% del total filtrado")
+        st.metric("Dias IT priorizados", f"{dias_sel:,}", delta=share_general_text(dias_sel, total_dias_global))
     with c4:
-        st.metric("Dias >15 priorizados", f"{dias15_sel:,}", delta=f"{ratio(dias15_sel, total_dias15_global):.1f}% del total filtrado")
+        st.metric("Dias >15 priorizados", f"{dias15_sel:,}", delta=share_general_text(dias15_sel, total_dias15_global))
 
     df_tabla = df_cuadrante[[
         COL_DIAG,
@@ -401,19 +417,19 @@ df_principal_fuera = df_trabajo[restantes_mask][[
     COL_SHARE_TOTAL_EPIS,
 ]].copy()
 
-st.markdown('#### Diagnosticos PRINCIPAL fuera del cuadrante')
-if df_principal_fuera.empty:
-    st.info('Ningun diagnostico de tipo PRINCIPAL queda fuera del cuadrante con los umbrales actuales.')
-else:
-    df_principal_fuera = df_principal_fuera.sort_values(COL_TOTAL_EPIS, ascending=False)
-    df_principal_format = df_principal_fuera.rename(columns={
-        COL_DURACION_MEDIA: 'Tod durac media',
-        COL_PCT_EPI_GT15: '%TotEpis>15dias (%)',
-        COL_SHARE_TOTAL_EPIS: '%Totsobre total epis (%)',
-    }).copy()
-    df_principal_format['%TotEpis>15dias (%)'] = df_principal_format['%TotEpis>15dias (%)'].round(2)
-    df_principal_format['%Totsobre total epis (%)'] = df_principal_format['%Totsobre total epis (%)'].round(4)
-    df_principal_format['Tod durac media'] = df_principal_format['Tod durac media'].round(1)
-    for col in [COL_TOTAL_EPIS, COL_TOTAL_DIAS, COL_DIAS_GT15]:
-        df_principal_format[col] = df_principal_format[col].astype('Int64')
-    st.dataframe(df_principal_format, use_container_width=True, hide_index=True)
+with st.expander('Diagnosticos PRINCIPAL fuera del cuadrante', expanded=False):
+    if df_principal_fuera.empty:
+        st.info('Ningun diagnostico de tipo PRINCIPAL queda fuera del cuadrante con los umbrales actuales.')
+    else:
+        df_principal_fuera = df_principal_fuera.sort_values(COL_TOTAL_EPIS, ascending=False)
+        df_principal_format = df_principal_fuera.rename(columns={
+            COL_DURACION_MEDIA: 'Tod durac media',
+            COL_PCT_EPI_GT15: '%TotEpis>15dias (%)',
+            COL_SHARE_TOTAL_EPIS: '%Totsobre total epis (%)',
+        }).copy()
+        df_principal_format['%TotEpis>15dias (%)'] = df_principal_format['%TotEpis>15dias (%)'].round(2)
+        df_principal_format['%Totsobre total epis (%)'] = df_principal_format['%Totsobre total epis (%)'].round(4)
+        df_principal_format['Tod durac media'] = df_principal_format['Tod durac media'].round(1)
+        for col in [COL_TOTAL_EPIS, COL_TOTAL_DIAS, COL_DIAS_GT15]:
+            df_principal_format[col] = df_principal_format[col].astype('Int64')
+        st.dataframe(df_principal_format, use_container_width=True, hide_index=True)
