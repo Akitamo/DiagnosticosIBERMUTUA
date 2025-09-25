@@ -67,14 +67,14 @@ DiagnosticosIBERMUTUA/
 - Clasificacion dinamica ExclNum, ExclDur, Incluido recalculada en vivo segun los sliders
 - Graficos funnel (4 paneles) mostrando evolucion por diagnosticos, episodios, dias totales y dias >15
 - Grafico de eficiencia tipo Pareto con los porcentajes retenidos
-- Matriz de priorizacion interactiva basada en severidad S1h (duracion media * hibrido de %>15) y participacion en logit, con umbrales ajustables y tabla de diagnosticos prioritarios sin leyenda fija
+- Matriz de priorizacion interactiva basada en duracion media (eje X) y % de dias retenidos (eje Y, con opcion dias >15) sobre escala logit, con burbujas proporcionadas a episodios y tabla de diagnosticos prioritarios sin leyenda fija
 
 ### Otras visualizaciones
 - Diagrama Sankey de distribucion de diagnosticos (version inicial)
 
 ## ESTADO ACTUAL (24/09/2025)
-- Matriz de priorizacion usa severidad S1h (duracion media * [(1 - phi) + phi*(%>15)^a + psi*lift]) en el eje X y la participacion de episodios en logit para Y; la leyenda lateral permanece desactivada.
-- Sliders para S1h (cuantiles 5-95, default P75), zona muerta m, curvatura a, pesos phi/psi y % del total de episodios (paso 0.0005) gobiernan los cortes del grafico y de la tabla priorizada.
+- Matriz de priorizacion usa la duracion media en el eje X y percentil de dias (totales o >15) en el eje Y (logit); la leyenda lateral permanece desactivada.
+- Sliders de duracion (cuantiles 5-95) y % de dias gobiernan los cortes del grafico y la tabla priorizada; se incluye toggle para % de dias >15 y checkbox para excluir tipo EXCLUIDO_2000.
 - KPIs de priorizados referencian el universo total, la tabla incluye fila de totales y se expone listado de PRINCIPAL fuera del cuadrante.
 - Burbuja escala por dias totales (winsor p95) y los hover muestran diagnostico, capitulo y metricas clave en % reales.
 - KPIs, funnels, Pareto y controles siguen recalculando correctamente; Sankey mantiene la version inicial.
