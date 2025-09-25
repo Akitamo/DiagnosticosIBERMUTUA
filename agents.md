@@ -67,7 +67,7 @@ DiagnosticosIBERMUTUA/
 - Clasificacion dinamica ExclNum, ExclDur, Incluido recalculada en vivo segun los sliders
 - Graficos funnel (4 paneles) mostrando evolucion por diagnosticos, episodios, dias totales y dias >15
 - Grafico de eficiencia tipo Pareto con los porcentajes retenidos
-- Matriz de priorizacion interactiva basada en duracion media (eje X) y % de dias retenidos (eje Y, con opcion dias >15) sobre escala logit, con burbujas proporcionadas a episodios y tabla de diagnosticos prioritarios sin leyenda fija
+- Matriz de priorizacion interactiva basada en duracion media (eje X) y % de dias retenidos (eje Y, con opcion dias >15) sobre escala logit, con burbujas proporcionadas a episodios y tabla de diagnosticos prioritarios sin leyenda fija; los filtros se aplican desde la barra lateral unica.
 
 ### Otras visualizaciones
 - Diagrama Sankey de distribucion de diagnosticos (version inicial)
