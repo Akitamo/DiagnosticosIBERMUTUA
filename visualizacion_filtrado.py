@@ -338,29 +338,29 @@ else:
     with c4:
         st.metric("Dias >15 priorizados", f"{dias15_sel:,}", delta=f"{ratio(dias15_sel, base_denominadores['dias_mayor_15']):.1f}% del total filtrado")
 
-        df_tabla = df_cuadrante[[
-            COL_DIAG,
-            COL_CAPITULO,
-            COL_TIPO,
-            COL_TOTAL_EPIS,
-            COL_TOTAL_DIAS,
-            COL_DIAS_GT15,
-            COL_DURACION_MEDIA,
-            COL_PCT_EPI_GT15,
-            COL_SHARE_TOTAL_EPIS,
-        ]].copy()
-        df_tabla = df_tabla.sort_values(COL_TOTAL_EPIS, ascending=False)
-        df_tabla_format = df_tabla.rename(columns={
-            COL_DURACION_MEDIA: 'Tod durac media',
-            COL_PCT_EPI_GT15: '%TotEpis>15dias (%)',
-            COL_SHARE_TOTAL_EPIS: '%Totsobre total epis (%)',
-        }).copy()
-        df_tabla_format['%TotEpis>15dias (%)'] = df_tabla_format['%TotEpis>15dias (%)'].round(2)
-        df_tabla_format['%Totsobre total epis (%)'] = df_tabla_format['%Totsobre total epis (%)'].round(4)
-        df_tabla_format['Tod durac media'] = df_tabla_format['Tod durac media'].round(1)
-        for col in [COL_TOTAL_EPIS, COL_TOTAL_DIAS, COL_DIAS_GT15]:
-            df_tabla_format[col] = df_tabla_format[col].astype('Int64')
-        st.dataframe(df_tabla_format, use_container_width=True, hide_index=True)
+    df_tabla = df_cuadrante[[
+        COL_DIAG,
+        COL_CAPITULO,
+        COL_TIPO,
+        COL_TOTAL_EPIS,
+        COL_TOTAL_DIAS,
+        COL_DIAS_GT15,
+        COL_DURACION_MEDIA,
+        COL_PCT_EPI_GT15,
+        COL_SHARE_TOTAL_EPIS,
+    ]].copy()
+    df_tabla = df_tabla.sort_values(COL_TOTAL_EPIS, ascending=False)
+    df_tabla_format = df_tabla.rename(columns={
+        COL_DURACION_MEDIA: 'Tod durac media',
+        COL_PCT_EPI_GT15: '%TotEpis>15dias (%)',
+        COL_SHARE_TOTAL_EPIS: '%Totsobre total epis (%)',
+    }).copy()
+    df_tabla_format['%TotEpis>15dias (%)'] = df_tabla_format['%TotEpis>15dias (%)'].round(2)
+    df_tabla_format['%Totsobre total epis (%)'] = df_tabla_format['%Totsobre total epis (%)'].round(4)
+    df_tabla_format['Tod durac media'] = df_tabla_format['Tod durac media'].round(1)
+    for col in [COL_TOTAL_EPIS, COL_TOTAL_DIAS, COL_DIAS_GT15]:
+        df_tabla_format[col] = df_tabla_format[col].astype('Int64')
+    st.dataframe(df_tabla_format, use_container_width=True, hide_index=True)
 
 tipo_norm = df_trabajo[COL_TIPO].astype(str).str.strip().str.lower()
 restantes_mask = (tipo_norm == 'principal') & (~df_trabajo.index.isin(df_cuadrante.index))
