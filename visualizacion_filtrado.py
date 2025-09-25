@@ -310,13 +310,6 @@ share_umbral_logit = logit(share_umbral_prop) if share_umbral_prop else logit(1e
 fig_prior.add_hline(y=share_umbral_logit, line_dash='dash', line_color='gray', annotation_text=f'Umbral {share_label} ({share_umbral_pct:.4f}%)', annotation_position='bottom right')
 st.plotly_chart(fig_prior, use_container_width=True)
 
-base_denominadores = {
-    'diagnosticos': total_diag_base,
-    'episodios': total_epi_base,
-    'dias': total_dias_base,
-    'dias_mayor_15': total_dias15_base,
-}
-
 df_cuadrante = df_trabajo[(df_trabajo[COL_DURACION_MEDIA] >= duracion_umbral) & (df_trabajo[share_pct_column] >= share_umbral_pct) & (df_trabajo[COL_TOTAL_EPIS] >= episodios_min)].copy()
 
 st.markdown('#### Diagnosticos priorizados (cuadrante)')
@@ -330,13 +323,13 @@ else:
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.metric("Diagnosticos priorizados", f"{diag_sel:,}", delta=f"{ratio(diag_sel, base_denominadores['diagnosticos']):.1f}% del total filtrado")
+        st.metric("Diagnosticos priorizados", f"{diag_sel:,}", delta=f"{ratio(diag_sel, total_diag_global):.1f}% del total filtrado")
     with c2:
-        st.metric("Episodios priorizados", f"{epis_sel:,}", delta=f"{ratio(epis_sel, base_denominadores['episodios']):.1f}% del total filtrado")
+        st.metric("Episodios priorizados", f"{epis_sel:,}", delta=f"{ratio(epis_sel, total_epi_global):.1f}% del total filtrado")
     with c3:
-        st.metric("Dias IT priorizados", f"{dias_sel:,}", delta=f"{ratio(dias_sel, base_denominadores['dias']):.1f}% del total filtrado")
+        st.metric("Dias IT priorizados", f"{dias_sel:,}", delta=f"{ratio(dias_sel, total_dias_global):.1f}% del total filtrado")
     with c4:
-        st.metric("Dias >15 priorizados", f"{dias15_sel:,}", delta=f"{ratio(dias15_sel, base_denominadores['dias_mayor_15']):.1f}% del total filtrado")
+        st.metric("Dias >15 priorizados", f"{dias15_sel:,}", delta=f"{ratio(dias15_sel, total_dias15_global):.1f}% del total filtrado")
 
     df_tabla = df_cuadrante[[
         COL_DIAG,
