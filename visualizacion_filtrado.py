@@ -4,6 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import streamlit as st
+import math
 
 COL_DIAG = "Diagnostico"
 COL_DESC = "Descripcion"
@@ -118,7 +119,7 @@ episodios_min = st.sidebar.slider(
     "Episodios minimos para gestion activa",
     min_value=0,
     max_value=max_episodios,
-    value=500,
+    value=2000,
     step=50,
 )
 
@@ -221,15 +222,23 @@ color_choice = st.sidebar.selectbox("Color por", list(COLOR_OPTIONS.keys()), ind
 color_field = COLOR_OPTIONS[color_choice]
 
 dur_series = df_trabajo[COL_DURACION_MEDIA]
-dur_min = float(dur_series.quantile(0.05))
-dur_max = float(dur_series.quantile(0.95))
+if dur_series.dropna().empty:
+    dur_min_quant = 0.0
+    dur_max_quant = 30.0
+else:
+    dur_min_quant = float(dur_series.quantile(0.05))
+    dur_max_quant = float(dur_series.quantile(0.95))
+dur_min = math.floor(dur_min_quant)
+dur_max = math.ceil(dur_max_quant)
+target_dur_default = 15.0
+if dur_min > target_dur_default:
+    dur_min = target_dur_default
+if dur_max < target_dur_default:
+    dur_max = target_dur_default
 if dur_max <= dur_min:
-    dur_max = dur_min + 0.1
-dur_default = float(dur_series.quantile(0.75))
-if dur_default < dur_min or dur_default > dur_max:
-    dur_default = (dur_min + dur_max) / 2
-dur_step = max((dur_max - dur_min) / 100, 0.05)
-duracion_umbral = st.sidebar.slider("Umbral duracion media (dias)", min_value=dur_min, max_value=dur_max, value=float(round(dur_default, 3)), step=float(round(dur_step, 3)))
+    dur_max = dur_min + 1
+dur_default = min(max(target_dur_default, float(dur_min)), float(dur_max))
+duracion_umbral = st.sidebar.slider("Umbral duracion media (dias)", min_value=float(dur_min), max_value=float(dur_max), value=float(dur_default), step=1.0)
 
 y_metric_option = st.sidebar.radio("Metrica eje Y", ("Dias totales", "Dias >15"), index=0)
 if y_metric_option == "Dias >15":
@@ -249,11 +258,21 @@ share_pct_series = share_pct_target
 share_max = float(share_pct_series.quantile(0.95))
 if share_max <= 0:
     share_max = float(share_pct_series.max() or 0.1)
-share_default = float(share_pct_series.quantile(0.75))
-if share_default > share_max:
-    share_default = share_max
+share_target_default = 0.11
+share_max = max(share_max, share_target_default)
+share_default_data = float(share_pct_series.quantile(0.75))
+if share_default_data > share_max:
+    share_default_data = share_max
+share_default = share_target_default if share_target_default <= share_max else share_default_data
+share_default = max(share_default, 0.0)
 share_step = max(share_max / 200, 0.0005)
-share_umbral_pct = st.sidebar.slider(f"Umbral {share_label}", min_value=0.0, max_value=share_max, value=float(round(share_default, 4)), step=float(round(share_step, 4)))
+share_umbral_pct = st.sidebar.slider(
+    f"Umbral {share_label}",
+    min_value=0.0,
+    max_value=share_max,
+    value=float(round(share_default, 4)),
+    step=float(round(share_step, 4)),
+)
 
 y_axis_title = "% del total de dias >15 (logit)" if y_metric_option == "Dias >15" else "% del total de dias (logit)"
 
