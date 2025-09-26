@@ -427,11 +427,20 @@ else:
                     x=metric_field,
                     y=COL_CAPITULO,
                     orientation='h',
-                    text_auto='.0f',
                     title=metric_label,
+                    text=[f"{int(v):,}" for v in df_plot[metric_field]],
                 )
-                fig.update_layout(margin=dict(l=0, r=10, t=40, b=0), height=320)
-                fig.update_traces(hovertemplate='%{y}<br>'+metric_label+': %{x:,}')
+                fig.update_layout(
+                    margin=dict(l=0, r=10, t=40, b=0),
+                    height=320,
+                    xaxis=dict(tickformat=','),
+                    yaxis=dict(categoryorder='array', categoryarray=df_plot[COL_CAPITULO].tolist()),
+                )
+                fig.update_traces(
+                    marker_color='#1f77b4',
+                    textposition='outside',
+                    hovertemplate='%{y}<br>'+metric_label+': %{x:,}'
+                )
                 st.plotly_chart(fig, use_container_width=True)
 
 tipo_norm = df_trabajo[COL_TIPO].astype(str).str.strip().str.lower()
