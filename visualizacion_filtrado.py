@@ -434,7 +434,11 @@ else:
                     margin=dict(l=0, r=10, t=40, b=0),
                     height=320,
                     xaxis=dict(tickformat=','),
-                    yaxis=dict(categoryorder='array', categoryarray=df_plot[COL_CAPITULO].tolist()),
+                    yaxis=dict(
+                        categoryorder='array',
+                        categoryarray=df_plot[COL_CAPITULO].tolist(),
+                        autorange='reversed'
+                    ),
                 )
                 fig.update_traces(
                     marker_color='#1f77b4',
