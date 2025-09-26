@@ -23,7 +23,7 @@ Python 3.12+, Streamlit, Plotly, Pandas, Openpyxl.
 
 ## FUNCIONALIDAD PRINCIPAL
 - Dashboard con KPIs globales y tras filtros, funnel de diagnosticos/episodios/dias/dias>15 y grafico Pareto.
-- Matriz de priorizacion (bubble chart logit) con coloracion por percentil de % episodios >15 (gradiente YlOrRd) y selector de tamano por episodios/dias, tabla de cuadrante y listado de tipo PRINCIPAL fuera del umbral.
+- Matriz de priorizacion (bubble chart logit) con coloracion por percentil de % episodios >15 (gradiente YlOrRd) y selector de tamano por episodios/dias, tabla de cuadrante, graficas por capitulo y listado de tipo PRINCIPAL fuera del umbral.
 - Sankey inicial para distribucion de diagnosticos.
 
 ## PARAMETROS INICIALES (25/09/2025)
@@ -39,6 +39,7 @@ Python 3.12+, Streamlit, Plotly, Pandas, Openpyxl.
 ## ESTADO ACTUAL
 - Sliders recalculan las categorias ExclNum y ExclDur en vivo; la matriz y KPIs se sincronizan con los filtros.
 - Escala logit, winsor p95 para el tamano de burbuja (con selector episodios/dias) y gradiente continuo por percentil %>15; leyenda de categorias sigue oculta y la tabla de PRINCIPAL queda en expander colapsado.
+- Graficas horizontales por capitulo muestran diagnosticos, episodios y dias retenidos tras los filtros.
 - Lado derecho muestra KPIs de cuadrante y tabla priorizada con formatos porcentuales y totales.
 
 ## PROXIMOS PASOS SUGERIDOS

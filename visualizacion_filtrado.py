@@ -403,6 +403,37 @@ else:
         df_tabla_format[col] = df_tabla_format[col].astype('Int64')
     st.dataframe(df_tabla_format, use_container_width=True, hide_index=True)
 
+    df_capitulos = df_cuadrante.groupby(COL_CAPITULO).agg(
+        diagnosticos=(COL_DIAG, 'nunique'),
+        episodios=(COL_TOTAL_EPIS, 'sum'),
+        dias=(COL_TOTAL_DIAS, 'sum'),
+    ).reset_index()
+    for col in ['diagnosticos', 'episodios', 'dias']:
+        df_capitulos[col] = df_capitulos[col].astype(int)
+
+    if not df_capitulos.empty:
+        st.markdown('##### Distribucion por capitulo (diagnosticos priorizados)')
+        cap_cols = st.columns(3)
+        metric_map = [
+            ("Diagnosticos", 'diagnosticos'),
+            ("Episodios", 'episodios'),
+            ("Dias IT", 'dias'),
+        ]
+        for fig_col, (metric_label, metric_field) in zip(cap_cols, metric_map):
+            with fig_col:
+                df_plot = df_capitulos.sort_values(metric_field, ascending=False)
+                fig = px.bar(
+                    df_plot,
+                    x=metric_field,
+                    y=COL_CAPITULO,
+                    orientation='h',
+                    text_auto='.0f',
+                    title=metric_label,
+                )
+                fig.update_layout(margin=dict(l=0, r=10, t=40, b=0), height=320)
+                fig.update_traces(hovertemplate='%{y}<br>'+metric_label+': %{x:,}')
+                st.plotly_chart(fig, use_container_width=True)
+
 tipo_norm = df_trabajo[COL_TIPO].astype(str).str.strip().str.lower()
 restantes_mask = (tipo_norm == 'principal') & (~df_trabajo.index.isin(df_cuadrante.index))
 df_principal_fuera = df_trabajo[restantes_mask][[
