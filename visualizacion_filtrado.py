@@ -253,7 +253,7 @@ else:
     dur_max_quant = float(dur_series.quantile(0.95))
 dur_min = math.floor(dur_min_quant)
 dur_max = math.ceil(dur_max_quant)
-target_dur_default = 15.0
+target_dur_default = 30.0
 if dur_min > target_dur_default:
     dur_min = target_dur_default
 if dur_max < target_dur_default:
@@ -281,7 +281,7 @@ share_pct_series = share_pct_target
 share_max = float(share_pct_series.quantile(0.95))
 if share_max <= 0:
     share_max = float(share_pct_series.max() or 0.1)
-share_target_default = 0.11
+share_target_default = 0.22
 share_max = max(share_max, share_target_default)
 share_default_data = float(share_pct_series.quantile(0.75))
 if share_default_data > share_max:

@@ -33,8 +33,8 @@ Python 3.12+, Streamlit, Plotly, Pandas, Openpyxl.
 - Color por: Percentil % episodios >15 (gradiente YlOrRd)
 - Tamano burbuja: Numero de episodios
 - Metrica eje Y: Dias totales
-- Umbral duracion media: 15 dias (slider con paso entero)
-- Umbral % dias: 0.11%
+- Umbral duracion media: 30 dias (slider con paso entero)
+- Umbral % dias: 0.22%
 
 ## ESTADO ACTUAL
 - Sliders recalculan las categorias ExclNum y ExclDur en vivo; la matriz y KPIs se sincronizan con los filtros.
